@@ -56,8 +56,12 @@ Si un valor no sobrevive a `make data && git diff --exit-code`, no es real.
 ## Códigos de salida de `audit.sh`
 
 - `0` — limpio
-- `1` — errores (CI que traga fallos, o sin tests) → debe romper el CI
+- `1` — errores (CI que traga fallos, o un repo **con código** sin tests) → debe romper el CI
 - `2` — invocación incorrecta (la ruta no es un repo git)
+
+El chequeo de tests solo aplica si el repo tiene código de aplicación
+(py/js/ts/go/rs/…). En sitios estáticos o repos de solo scripts se salta con
+una nota, para no generar falsos positivos.
 
 Los "ficheros de resultados sin generador" se reportan como *warning*
 (heurístico, puede tener falsos positivos) y no rompen el build.

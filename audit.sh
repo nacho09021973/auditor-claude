@@ -39,11 +39,20 @@ if ls .github/workflows/*.y*ml >/dev/null 2>&1; then
 fi
 
 # 2. Are there any real test files? ------------------------------------------
-testcount="$(git ls-files '*test_*.py' '*_test.py' 'tests/**' '*.test.*' '*_test.go' 2>/dev/null \
-             | grep -cE '\.(py|js|ts|go|rs)$' || true)"
-if [ "${testcount:-0}" -eq 0 ]; then
-  echo "ERROR: no test files found (e.g. tests/ or test_*.py)."
-  errors=$((errors + 1))
+# Only relevant if the repo actually contains application code. Static sites
+# (html/css/md/xml) and shell-only tool repos legitimately have no unit tests,
+# so we skip the check for them instead of raising a false positive.
+appcode="$(git ls-files '*.py' '*.js' '*.jsx' '*.ts' '*.tsx' '*.go' '*.rs' \
+            '*.rb' '*.java' '*.c' '*.cc' '*.cpp' '*.kt' '*.scala' 2>/dev/null | head -1)"
+if [ -n "$appcode" ]; then
+  testcount="$(git ls-files '*test_*.py' '*_test.py' 'tests/**' '*.test.*' '*_test.go' 2>/dev/null \
+               | grep -cE '\.(py|js|ts|go|rs)$' || true)"
+  if [ "${testcount:-0}" -eq 0 ]; then
+    echo "ERROR: application code present but no test files found (e.g. tests/ or test_*.py)."
+    errors=$((errors + 1))
+  fi
+else
+  echo "note: no application code detected; skipping test-presence check."
 fi
 
 # 3. Committed result/data files with no generator reference -----------------
