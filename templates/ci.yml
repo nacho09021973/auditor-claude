@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          if [ -f pyproject.toml ]; then pip install -e .; fi
+          pip install pytest
+
+      # No "|| echo skip": a failure here turns the build red, as it should.
+      - name: Tests
+        run: make test
+
+      - name: Smoke
+        run: make smoke
+
+      # The decisive guardrail: committed data must be regenerable byte-for-byte.
+      # Comment this out only if a project legitimately has no generated data.
+      - name: Data is reproducible
+        run: make check-reproducible
+
+      - name: Integrity audit
+        run: make audit
